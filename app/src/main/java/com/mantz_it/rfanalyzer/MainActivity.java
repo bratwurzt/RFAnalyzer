@@ -159,7 +159,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 			 * 1) We won't restart the Analyzer if the current source is set to a local RTL-SDR instance:
 			 * 2) Delay the restart of the Analyzer after the driver was shut down correctly...
 			 */
-			if(running && Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1")) == RTLSDR_SOURCE
+			if(running && Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2")) == RTLSDR_SOURCE
 					&& !preferences.getBoolean(getString(R.string.pref_rtlsdr_externalServer),false)) {
 				// 1) don't start Analyzer immediately
 				running = false;
@@ -210,7 +210,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		}
 
 		// shut down RTL2832U driver if running:
-		if(running && Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1")) == RTLSDR_SOURCE
+		if(running && Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2")) == RTLSDR_SOURCE
 				&& !preferences.getBoolean(getString(R.string.pref_rtlsdr_externalServer),false)) {
 			try {
 				Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -336,6 +336,11 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 					case Demodulator.DEMODULATION_USB:
 						iconRes = R.drawable.ic_action_demod_usb;
 						titleRes = R.string.action_demodulation_usb;
+						break;
+					case Demodulator.DEMODULATION_ASKOOK:
+						iconRes = R.drawable.ic_action_demod_askook;
+						titleRes = R.string.action_demodulation_askook;
+						//todo set starting freq
 						break;
 					default:
 						Log.e(LOGTAG,"updateActionBar: invalid mode: " + demodulationMode);
@@ -478,7 +483,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 	 */
 	public void checkForChangedPreferences() {
 		// Source Type (this is pretty complex as we have to check each type individually):
-		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1"));
+		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2"));
 		if(source != null) {
 			switch (sourceType) {
 				case FILE_SOURCE:
@@ -593,7 +598,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 	public boolean createSource() {
 		long frequency;
 		int sampleRate;
-		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1"));
+		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2"));
 
 		switch (sourceType) {
 			case FILE_SOURCE:
@@ -670,7 +675,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 	 * @return true on success; false on error
 	 */
 	public boolean openSource() {
-		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1"));
+		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2"));
 
 		switch (sourceType) {
 			case FILE_SOURCE:
@@ -1041,7 +1046,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		if(source == null)
 			return;
 
-		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1"));
+		int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2"));
 		switch (sourceType) {
 			case FILE_SOURCE:
 				Toast.makeText(this, getString(R.string.filesource_doesnt_support_gain), Toast.LENGTH_LONG).show();
@@ -1288,7 +1293,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 		final String externalDir = Environment.getExternalStorageDirectory().getAbsolutePath();
 		final int[] supportedSampleRates = source.getSupportedSampleRates();
 		final double maxFreqMHz = source.getMaxFrequency() / 1000000f; // max frequency of the source in MHz
-		final int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "1"));
+		final int sourceType = Integer.valueOf(preferences.getString(getString(R.string.pref_sourceType), "2"));
 		final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US);
 
 		// Get references to the GUI components:
