@@ -7,7 +7,10 @@
         <item>wide-band FM</item>
         <item>LSB</item>
         <item>USB</item>
-        <item>ASK/OOK</item>
+    </string-array>
+    <string-array name="digital_demod_modes">
+        <item>None</item>
+        <item>PSK</item>
     </string-array>
     <string-array name="pref_sourceType_entries">
         <item>File Source</item>

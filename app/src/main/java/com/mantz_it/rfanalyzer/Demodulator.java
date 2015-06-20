@@ -34,6 +34,7 @@ public class Demodulator extends Thread
       2 * AUDIO_RATE,  // USB
       2 * AUDIO_RATE};// ASK/OOK
 
+  private int demodBandwidth;
   public static final int INPUT_RATE = 1000000;  // Expected rate of the incoming samples
 
   // DECIMATION
@@ -82,7 +83,8 @@ public class Demodulator extends Thread
   public static final int DEMODULATION_LSB = 4;
   public static final int DEMODULATION_USB = 5;
   public static final int DEMODULATION_ASKOOK = 6;
-  public int demodulationMode;
+  public static final int DIGITAL_DEMOD_PSK = 1;
+  public int demodulationMode, digitalDemodulationMode;
 
   // AUDIO OUTPUT
   private AudioSink audioSink = null;    // Will do QUADRATURE_RATE --> AUDIO_RATE and audio output
@@ -120,6 +122,11 @@ public class Demodulator extends Thread
     return demodulationMode;
   }
 
+  public int getDigitalDemodulationMode()
+  {
+    return digitalDemodulationMode;
+  }
+
   /**
    * Sets a new demodulation mode. This can be done while the demodulator is running! Will automatically adjust internal sample rate conversions and the user filter if necessary
    *
@@ -138,6 +145,21 @@ public class Demodulator extends Thread
     this.lowdur = QUADRATURE_RATE[demodulationMode] * pl;
     this.dbdur = QUADRATURE_RATE[demodulationMode] * pl / 5;
     this.highdur = highmult * QUADRATURE_RATE[demodulationMode] * pl;
+  }
+
+  public void setDigitalDemodulationMode(int digitalDemodulationMode)
+  {
+    if (demodulationMode > 6 || demodulationMode < 0)
+    {
+      Log.e(LOGTAG, "setDigitalDemodulationMode: you have to set demodulation mode.");
+      return;
+    }
+    this.digitalDemodulationMode = digitalDemodulationMode;
+
+    if (DIGITAL_DEMOD_PSK == this.digitalDemodulationMode)
+    {
+      demodBandwidth = 75;
+    }
   }
 
   /**
@@ -237,11 +259,11 @@ public class Demodulator extends Thread
           break;
 
         case DEMODULATION_NFM:
-          demodulateFM(quadratureSamples, audioBuffer, 5000);
+          demodulateFM(quadratureSamples, audioBuffer, demodBandwidth);
           break;
 
         case DEMODULATION_WFM:
-          demodulateFM(quadratureSamples, audioBuffer, 75000);
+          demodulateFM(quadratureSamples, audioBuffer, demodBandwidth);
           break;
 
         case DEMODULATION_LSB:
@@ -272,6 +294,11 @@ public class Demodulator extends Thread
 
     this.stopRequested = true;
     Log.i(LOGTAG, "Demodulator stopped. (Thread: " + this.getName() + ")");
+  }
+
+  public void setDemodBandwidth(int demodBandwidth)
+  {
+    this.demodBandwidth = demodBandwidth;
   }
 
   /**
