@@ -45,6 +45,8 @@ public class Demodulator extends Thread
   private FirFilter userFilter = null;
   private int userFilterCutOff = 0;
   private SamplePacket quadratureSamples;
+  private AnalyzerSurface analyzerSurface;
+
   private static final int[] MIN_USER_FILTER_WIDTH = {
       0,    // off
       3000,  // AM
@@ -83,8 +85,8 @@ public class Demodulator extends Thread
   public static final int DEMODULATION_LSB = 4;
   public static final int DEMODULATION_USB = 5;
   public static final int DEMODULATION_ASKOOK = 6;
-  public static final int DIGITAL_DEMOD_PSK = 1;
-  public int demodulationMode, digitalDemodulationMode;
+  public static final int DIGITAL_DECODE_PSK = 1;
+  public int demodulationMode, digitalDecodeMode;
 
   // AUDIO OUTPUT
   private AudioSink audioSink = null;    // Will do QUADRATURE_RATE --> AUDIO_RATE and audio output
@@ -92,19 +94,19 @@ public class Demodulator extends Thread
   /**
    * Constructor. Creates a new demodulator block reading its samples from the given input queue and returning the buffers to the given output queue. Expects input samples to be at
    * baseband (mixing is done by the scheduler)
-   *
-   * @param inputQueue Queue that delivers received baseband signals
+   *  @param inputQueue Queue that delivers received baseband signals
    * @param outputQueue Queue to return used buffers from the inputQueue
    * @param packetSize Size of the packets in the input queue
+   * @param analyzerSurface
    */
-  public Demodulator(ArrayBlockingQueue<SamplePacket> inputQueue, ArrayBlockingQueue<SamplePacket> outputQueue, int packetSize)
+  public Demodulator(ArrayBlockingQueue<SamplePacket> inputQueue, ArrayBlockingQueue<SamplePacket> outputQueue, int packetSize, AnalyzerSurface analyzerSurface)
   {
     // Create internal sample buffers:
     // Note that we create the buffers for the case that there is no downsampling necessary
     // All other cases with input decimation > 1 are also possible because they only need
     // smaller buffers.
     this.quadratureSamples = new SamplePacket(packetSize);
-
+    this.analyzerSurface = analyzerSurface;
     // Create Audio Sink
     this.audioSink = new AudioSink(packetSize, AUDIO_RATE);
 
@@ -122,9 +124,9 @@ public class Demodulator extends Thread
     return demodulationMode;
   }
 
-  public int getDigitalDemodulationMode()
+  public int getDigitalDecodeMode()
   {
-    return digitalDemodulationMode;
+    return digitalDecodeMode;
   }
 
   /**
@@ -147,19 +149,21 @@ public class Demodulator extends Thread
     this.highdur = highmult * QUADRATURE_RATE[demodulationMode] * pl;
   }
 
-  public void setDigitalDemodulationMode(int digitalDemodulationMode)
+  public void setDigitalDecodeMode(int digitalDecodeMode)
   {
     if (demodulationMode > 6 || demodulationMode < 0)
     {
-      Log.e(LOGTAG, "setDigitalDemodulationMode: you have to set demodulation mode.");
+      Log.e(LOGTAG, "digitalDecodeMode: you have to set demodulation mode.");
       return;
     }
-    this.digitalDemodulationMode = digitalDemodulationMode;
+    this.digitalDecodeMode = digitalDecodeMode;
 
-    if (DIGITAL_DEMOD_PSK == this.digitalDemodulationMode)
-    {
-      demodBandwidth = 75;
-    }
+    //if (DIGITAL_DECODE_PSK == this.digitalDecodeMode)
+    //{
+    //  demodBandwidth = 1000;
+    //  analyzerSurface.setChannelFrequency(163375000);
+    //  analyzerSurface.setVirtualFrequency(163375000);
+    //}
   }
 
   /**
@@ -281,6 +285,19 @@ public class Demodulator extends Thread
         default:
           Log.e(LOGTAG, "run: invalid demodulationMode: " + demodulationMode);
       }
+
+      //switch (digitalDecodeMode)
+      //{
+      //  case DEMODULATION_OFF:
+      //    break;
+      //
+      //  case DIGITAL_DECODE_PSK:
+      //    demodulateAM(quadratureSamples, audioBuffer);
+      //    break;
+      //
+      //  default:
+      //    Log.e(LOGTAG, "run: invalid digitalDecodeMode: " + digitalDecodeMode);
+      //}
 
       // play audio		[sample rate is QUADRATURE_RATE]
       audioSink.enqueuePacket(audioBuffer);

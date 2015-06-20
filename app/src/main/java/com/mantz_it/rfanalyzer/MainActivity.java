@@ -55,7 +55,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
   private MenuItem mi_startStop = null;
   private MenuItem mi_demodulationMode = null;
-  private MenuItem mi_digitalDemodulationMode = null;
+  private MenuItem mi_digitalDecodeMode = null;
   private MenuItem mi_record = null;
   private FrameLayout fl_analyzerFrame = null;
   private AnalyzerSurface analyzerSurface = null;
@@ -69,7 +69,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
   private boolean running = false;
   private File recordingFile = null;
   private int demodulationMode = Demodulator.DEMODULATION_OFF;
-  private int digitalDemodulationMode = Demodulator.DEMODULATION_OFF;
+  private int digitalDecodeMode = Demodulator.DEMODULATION_OFF;
 
   private static final String LOGTAG = "MainActivity";
   private static final String APP_DIR = "RFAnalyzer";
@@ -262,7 +262,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
     // Get a reference to the start-stop button:
     mi_startStop = menu.findItem(R.id.action_startStop);
     mi_demodulationMode = menu.findItem(R.id.action_setDemodulation);
-    mi_digitalDemodulationMode = menu.findItem(R.id.action_setDigitalDemodulation);
+    mi_digitalDecodeMode = menu.findItem(R.id.action_setDigitalDemodulation);
     mi_record = menu.findItem(R.id.action_record);
 
     // update the action bar icons and titles according to the app state:
@@ -372,7 +372,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
               titleRes = R.string.action_demodulation_am;
               break;
             case Demodulator.DEMODULATION_NFM:
-              demodulator.setDemodBandwidth(75);
+              demodulator.setDemodBandwidth(3000);
               iconRes = R.drawable.ic_action_demod_nfm;
               titleRes = R.string.action_demodulation_nfm;
               break;
@@ -408,15 +408,15 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
         }
 
         // Set title and icon for the digital demodulator mode button
-        if (mi_digitalDemodulationMode != null)
+        if (mi_digitalDecodeMode != null)
         {
-          switch (digitalDemodulationMode)
+          switch (digitalDecodeMode)
           {
             case Demodulator.DEMODULATION_OFF:
               iconRes = R.drawable.ic_action_demod_off;
               titleRes = R.string.action_demodulation_off;
               break;
-            case Demodulator.DIGITAL_DEMOD_PSK:
+            case Demodulator.DIGITAL_DECODE_PSK:
               iconRes = R.drawable.ic_action_demod_am;
               titleRes = R.string.action_demodulation_psk;
               break;
@@ -426,15 +426,15 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
             //  //todo set starting freq
             //  break;
             default:
-              Log.e(LOGTAG, "updateActionBar: invalid mode: " + digitalDemodulationMode);
+              Log.e(LOGTAG, "updateActionBar: invalid mode: " + digitalDecodeMode);
               iconRes = -1;
               titleRes = -1;
               break;
           }
           if (titleRes > 0 && iconRes > 0)
           {
-            mi_digitalDemodulationMode.setTitle(titleRes);
-            mi_digitalDemodulationMode.setIcon(iconRes);
+            mi_digitalDecodeMode.setTitle(titleRes);
+            mi_digitalDecodeMode.setIcon(iconRes);
           }
         }
 
@@ -475,8 +475,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
     {
       analyzerSurface.setVirtualFrequency(savedInstanceState.getLong(getString(R.string.save_state_virtualFrequency)));
       analyzerSurface.setVirtualSampleRate(savedInstanceState.getInt(getString(R.string.save_state_virtualSampleRate)));
-      analyzerSurface.setDBScale(savedInstanceState.getFloat(getString(R.string.save_state_minDB)),
-          savedInstanceState.getFloat(getString(R.string.save_state_maxDB)));
+      analyzerSurface.setDBScale(savedInstanceState.getFloat(getString(R.string.save_state_minDB)), savedInstanceState.getFloat(getString(R.string.save_state_maxDB)));
       analyzerSurface.setChannelFrequency(savedInstanceState.getLong(getString(R.string.save_state_channelFrequency)));
       analyzerSurface.setChannelWidth(savedInstanceState.getInt(getString(R.string.save_state_channelWidth)));
       analyzerSurface.setSquelch(savedInstanceState.getFloat(getString(R.string.save_state_squelch)));
@@ -1053,12 +1052,17 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
     scheduler.setChannelFrequency(analyzerSurface.getChannelFrequency());
 
     // Start the demodulator thread:
-    demodulator = new Demodulator(scheduler.getDemodOutputQueue(), scheduler.getDemodInputQueue(), source.getPacketSize());
+    demodulator = new Demodulator(
+        scheduler.getDemodOutputQueue(),
+        scheduler.getDemodInputQueue(),
+        source.getPacketSize(),
+        analyzerSurface
+    );
     demodulator.start();
 
     // Set the demodulation mode (will configure the demodulator correctly)
     this.setDemodulationMode(demodulationMode);
-    this.setDigitalDemodulationMode(digitalDemodulationMode);
+    this.setDigitalDecodeMode(digitalDecodeMode);
 
     // update the action bar icons and titles:
     updateActionBar();
@@ -1117,11 +1121,11 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
 
     new AlertDialog.Builder(this)
         .setTitle("Select a digital demodulation mode:")
-        .setSingleChoiceItems(R.array.digital_demod_modes, demodulator.getDigitalDemodulationMode(), new DialogInterface.OnClickListener()
+        .setSingleChoiceItems(R.array.digital_demod_modes, demodulator.getDigitalDecodeMode(), new DialogInterface.OnClickListener()
         {
           public void onClick(DialogInterface dialog, int which)
           {
-            setDigitalDemodulationMode(which);
+            setDigitalDecodeMode(which);
             dialog.dismiss();
           }
         })
@@ -1203,7 +1207,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
     updateActionBar();
   }
 
-  public void setDigitalDemodulationMode(int mode)
+  public void setDigitalDecodeMode(int mode)
   {
     if (mode > Demodulator.DEMODULATION_OFF && this.demodulationMode == Demodulator.DEMODULATION_OFF)
     {
@@ -1211,9 +1215,26 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
     }
     else
     {
+      this.digitalDecodeMode = mode;
       // set demodulation mode in demodulator:
-      demodulator.setDigitalDemodulationMode(mode);
-      this.digitalDemodulationMode = mode;  // save the setting
+      switch (digitalDecodeMode)
+      {
+        case Demodulator.DEMODULATION_OFF:
+          break;
+        case Demodulator.DIGITAL_DECODE_PSK:
+          int newFreq = 163375000;
+          setFrequency(newFreq);
+          setBandwidth(100000);
+          analyzerSurface.setChannelFrequency(newFreq);
+          onUpdateChannelFrequency(newFreq);
+          analyzerSurface.setChannelWidth(6250);
+          onUpdateChannelWidth(6250);
+          break;
+        default:
+          break;
+      }
+      demodulator.setDigitalDecodeMode(mode);
+
       updateActionBar();
     }
   }
@@ -1281,12 +1302,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
               }
               if (newFreq <= source.getMaxFrequency() && newFreq >= source.getMinFrequency())
               {
-                source.setFrequency((long)newFreq);
-                analyzerSurface.setVirtualFrequency((long)newFreq);
-                if (demodulationMode != Demodulator.DEMODULATION_OFF)
-                {
-                  analyzerSurface.setDemodulationEnabled(true);  // This will re-adjust the channel freq correctly
-                }
+                setFrequency((long)newFreq);
 
                 // Set bandwidth (virtual sample rate):
                 if (cb_bandwidth.isChecked() && et_bandwidth.getText().length() != 0)
@@ -1304,8 +1320,7 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
                   {
                     bandwidth = source.getMaxFrequency();
                   }
-                  source.setSampleRate(source.getNextHigherOptimalSampleRate((int)bandwidth));
-                  analyzerSurface.setVirtualSampleRate((int)bandwidth);
+                  setBandwidth((int)bandwidth);
                 }
                 // safe preferences:
                 SharedPreferences.Editor edit = preferences.edit();
@@ -1333,6 +1348,22 @@ public class MainActivity extends Activity implements IQSourceInterface.Callback
           }
         })
         .show();
+  }
+
+  public void setBandwidth(int bandwidth)
+  {
+    source.setSampleRate(source.getNextHigherOptimalSampleRate(bandwidth));
+    analyzerSurface.setVirtualSampleRate(bandwidth);
+  }
+
+  public void setFrequency(long newFreq)
+  {
+    source.setFrequency(newFreq);
+    analyzerSurface.setVirtualFrequency(newFreq);
+    if (demodulationMode != Demodulator.DEMODULATION_OFF)
+    {
+      analyzerSurface.setDemodulationEnabled(true);  // This will re-adjust the channel freq correctly
+    }
   }
 
   /**
